@@ -1,15 +1,21 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Editor from "./components/Editor";
-import { data } from "./data";
 import Split from "react-split";
 import { nanoid } from "nanoid";
 
-export default function App() {
-    const [notes, setNotes] = React.useState([]);
-    const [currentNoteId, setCurrentNoteId] = React.useState(
-        (notes[0] && notes[0].id) || ""
+const App = () => {
+    const [notes, setNotes] = useState(
+        () => JSON.parse(localStorage.getItem("notes")) || []
     );
+
+    const [currentNoteId, setCurrentNoteId] = useState(
+        () => (notes[0] && notes[0].id) || ""
+    );
+
+    useEffect(() => {
+        localStorage.setItem("notes", JSON.stringify(notes));
+    }, [notes]);
 
     const createNewNote = () => {
         const newNote = {
@@ -20,14 +26,23 @@ export default function App() {
         setCurrentNoteId(newNote.id);
     };
 
-    const updateNote = (text) => {
-        setNotes((oldNotes) =>
-            oldNotes.map((oldNote) => {
-                return oldNote.id === currentNoteId
-                    ? { ...oldNote, body: text }
-                    : oldNote;
-            })
-        );
+    const updateNote = (text) =>
+        setNotes((oldNotes) => {
+            // Put the last updated element at the top of the array
+            let updatedNotes = [];
+            for (const note of oldNotes) {
+                if (note.id === currentNoteId) {
+                    updatedNotes.unshift({ ...note, body: text });
+                } else {
+                    updatedNotes.push(note);
+                }
+            }
+            return updatedNotes;
+        });
+
+    const deleteNote = (event, noteId) => {
+        event.stopPropagation();
+        setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
     };
 
     const findCurrentNote = () => {
@@ -51,6 +66,7 @@ export default function App() {
                         currentNote={findCurrentNote()}
                         setCurrentNoteId={setCurrentNoteId}
                         newNote={createNewNote}
+                        deleteNote={deleteNote}
                     />
                     {currentNoteId && notes.length > 0 && (
                         <Editor
@@ -69,4 +85,6 @@ export default function App() {
             )}
         </main>
     );
-}
+};
+
+export default App;
